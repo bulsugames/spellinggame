@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #162447);
+            color: #fff;
+            text-align: center;
+        }
+
+        .container {
+            width: 85%;
+            margin: auto;
+            padding-top: 50px;
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 800;
+            color: #ffd166;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #ff7f50, #ffd166);
+            color: #1a1a2e;
+            padding: 12px 20px;
+            display: inline-block;
+            text-decoration: none;
+            border-radius: 20px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 10px rgba(0,0,0,0.3);
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 20px rgba(0,0,0,0.6);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 40px;
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(8px);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        th {
+            background: rgba(255,255,255,0.1);
+            color: #ffd166;
+            font-weight: 700;
+        }
+
+        td {
+            color: #fff;
+        }
+
+        .no-data {
+            color: #ffffffaa;
+            font-size: 18px;
+            margin-top: 40px;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(135deg, #4d94ff, #0066cc);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 700;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0,102,204,0.4);
+        }
+        
+        .latest-badge {
+            background: #ffd166;
+            color: #1a1a2e;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Leaderboard</h1>
+        <p>View all player records below.</p>
+        
+        <div style="margin-bottom: 20px;">
+            <button class="refresh-btn" onclick="refreshScores()">Refresh</button>
+            <button class="refresh-btn" onclick="clearAllScores()" style="background: linear-gradient(135deg, #ff4d4d, #cc0000);">Clear All Records</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Player ID</th>
+                    <th>Player Name</th>
+                    <th>Score</th>
+                    <th>Game Type</th>
+                    <th>Date & Time</th>
+                </tr>
+            </thead>
+            <tbody id="scoresTableBody">
+                <!-- Scores will be loaded here -->
+            </tbody>
+        </table>
+        
+        <p id="noScoresMessage" class="no-data" style="display: none;">No scores recorded yet. Play a game to see records here!</p>
+
+        <a href="index.html" class="btn">Back to Homepage</a>
+    </div>
+
+    <script>
+        // Function to force cleanup to 40 records
+        function cleanupOldScores() {
+            let allScores = JSON.parse(localStorage.getItem('gameScores') || '[]');
+            
+            console.log("Before cleanup: " + allScores.length + " records");
+            
+            if (allScores.length > 40) {
+                // Sort by timestamp (newest first)
+                allScores.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                // Keep only the latest 40 scores
+                const latestScores = allScores.slice(0, 40);
+                
+                // Save back to localStorage
+                localStorage.setItem('gameScores', JSON.stringify(latestScores));
+                console.log("After cleanup: " + latestScores.length + " records kept");
+                return latestScores;
+            }
+            return allScores;
+        }
+        
+        function loadScores() {
+            const tableBody = document.getElementById('scoresTableBody');
+            const noScoresMessage = document.getElementById('noScoresMessage');
+            
+            // Clear existing rows
+            tableBody.innerHTML = '';
+            
+            // Get all scores from localStorage
+            let allScores = JSON.parse(localStorage.getItem('gameScores') || '[]');
+            
+            if (allScores.length === 0) {
+                // No scores available
+                tableBody.innerHTML = '';
+                noScoresMessage.style.display = 'block';
+                return;
+            }
+            
+            noScoresMessage.style.display = 'none';
+            
+            // Sort scores by timestamp (newest first)
+            allScores.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            // Display all scores
+            allScores.forEach((score, index) => {
+                const row = document.createElement('tr');
+                
+                // Player ID
+                const playerIdCell = document.createElement('td');
+                playerIdCell.textContent = `P${String(index + 1).padStart(3, '0')}`;
+                row.appendChild(playerIdCell);
+                
+                // Player Name
+                const nameCell = document.createElement('td');
+                nameCell.textContent = score.playerName;
+                
+                // Mark the latest score with a badge
+                if (index === 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'latest-badge';
+                    badge.textContent = 'NEWEST';
+                    nameCell.appendChild(badge);
+                }
+                
+                row.appendChild(nameCell);
+                
+                // Score
+                const scoreCell = document.createElement('td');
+                scoreCell.textContent = score.score;
+                scoreCell.style.fontWeight = 'bold';
+                scoreCell.style.color = '#ffd166';
+                row.appendChild(scoreCell);
+                
+                // Game Type
+                const gameTypeCell = document.createElement('td');
+                gameTypeCell.textContent = score.gameType || 'Unknown Game';
+                row.appendChild(gameTypeCell);
+                
+                // Date & Time
+                const dateCell = document.createElement('td');
+                dateCell.textContent = new Date(score.timestamp).toLocaleString();
+                row.appendChild(dateCell);
+                
+                tableBody.appendChild(row);
+            });
+            
+            console.log("Loaded " + allScores.length + " records");
+        }
+        
+        // Function to refresh scores (called by button)
+        function refreshScores() {
+            // First cleanup to ensure only 40 records
+            cleanupOldScores();
+            // Then load the scores
+            loadScores();
+            alert("Scores refreshed!");
+        }
+        
+        // Function to clear all scores
+        function clearAllScores() {
+            if (confirm("Are you sure you want to clear ALL scores?")) {
+                localStorage.removeItem('gameScores');
+                alert("All scores cleared!");
+                loadScores();
+            }
+        }
+        
+        // Load scores when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // IMPORTANT: Force cleanup to 40 records
+            let allScores = JSON.parse(localStorage.getItem('gameScores') || '[]');
+            
+            // If there are more than 40 records, keep only 40
+            if (allScores.length > 40) {
+                allScores.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                allScores = allScores.slice(0, 40);
+                localStorage.setItem('gameScores', JSON.stringify(allScores));
+                console.log("Initial cleanup: Kept " + allScores.length + " records");
+            }
+            
+            loadScores();
+        });
+    </script>
+</body>
+</html>
